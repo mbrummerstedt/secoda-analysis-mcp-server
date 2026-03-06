@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secoda-mcp-analysis"
+version = "0.1.0"
+description = "Secoda MCP Analysis Server - Read-only MCP server for business users"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "fastmcp>=0.1.0",
+    "requests>=2.28.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.1.0",
+    "pytest>=7.0.0",
+    "mypy>=1.0.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+select = ["E", "F", "I", "N", "B", "W", "C", "D"]
+ignore = ["D100", "D104", "D107", "E501", "N812"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
