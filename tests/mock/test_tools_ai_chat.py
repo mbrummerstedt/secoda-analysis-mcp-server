@@ -1,15 +1,28 @@
 """Unit tests for tools.ai_chat functions."""
 
 import json
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import responses as responses_lib
 
-from secoda_analysis.tools.ai_chat import _poll_for_completion, _submit_prompt, ai_chat
+from secoda_analysis.tools.ai_chat import (
+    _RateLimited,
+    _poll_for_completion,
+    _single_poll,
+    _submit_prompt,
+    ai_chat,
+)
 
 SUBMIT_URL = "https://app.secoda.co/ai/embedded_prompt/"
 POLL_URL = "https://app.secoda.co/ai/embedded_prompt/chat-abc123/"
+
+
+@pytest.fixture
+def mock_ctx():
+    ctx = MagicMock()
+    ctx.report_progress = AsyncMock()
+    return ctx
 
 
 class TestSubmitPrompt:
@@ -104,14 +117,62 @@ class TestPollForCompletion:
             _poll_for_completion("chat-abc123", poll_interval=0.01, timeout=0.05)
 
 
+class TestSinglePoll:
+    @responses_lib.activate
+    def test_returns_dict_on_success(self, ai_chat_completed_response):
+        responses_lib.add(responses_lib.GET, POLL_URL, json=ai_chat_completed_response, status=200)
+        result = _single_poll("chat-abc123")
+        assert result is not None
+        assert result["status"] == "completed"
+
+    @responses_lib.activate
+    def test_returns_pending_dict(self):
+        responses_lib.add(
+            responses_lib.GET,
+            POLL_URL,
+            json={"id": "chat-abc123", "status": "pending"},
+            status=200,
+        )
+        result = _single_poll("chat-abc123")
+        assert result is not None
+        assert result["status"] == "pending"
+
+    @responses_lib.activate
+    def test_raises_rate_limited_on_429(self):
+        responses_lib.add(responses_lib.GET, POLL_URL, status=429)
+        with pytest.raises(_RateLimited):
+            _single_poll("chat-abc123")
+
+    @responses_lib.activate
+    def test_raises_runtime_error_on_404(self):
+        responses_lib.add(responses_lib.GET, POLL_URL, status=404)
+        with pytest.raises(RuntimeError, match="not found"):
+            _single_poll("chat-abc123")
+
+    @responses_lib.activate
+    def test_raises_runtime_error_on_5xx(self):
+        responses_lib.add(responses_lib.GET, POLL_URL, status=500, body="server error")
+        with pytest.raises(RuntimeError, match="Polling failed"):
+            _single_poll("chat-abc123")
+
+    def test_returns_none_on_timeout(self):
+        import requests
+
+        with patch("requests.get", side_effect=requests.Timeout):
+            result = _single_poll("chat-abc123")
+        assert result is None
+
+
 class TestAiChat:
     @responses_lib.activate
-    def test_successful_chat_returns_json(
-        self, ai_chat_submit_response, ai_chat_completed_response
+    async def test_successful_chat_returns_json(
+        self, mock_ctx, ai_chat_submit_response, ai_chat_completed_response
     ):
         responses_lib.add(responses_lib.POST, SUBMIT_URL, json=ai_chat_submit_response, status=200)
         responses_lib.add(responses_lib.GET, POLL_URL, json=ai_chat_completed_response, status=200)
-        result = ai_chat(prompt="What is GMV?", poll_interval_seconds=0.01, timeout_seconds=5.0)
+        result = await ai_chat(
+            prompt="What is GMV?", ctx=mock_ctx, poll_interval_seconds=0.01, timeout_seconds=5.0
+        )
         data = json.loads(result)
         assert data["success"] is True
         assert data["chat_id"] == "chat-abc123"
@@ -119,14 +180,18 @@ class TestAiChat:
         assert "GMV" in data["response_content"]
 
     @responses_lib.activate
-    def test_submit_error_returns_error_json(self):
+    async def test_submit_error_returns_error_json(self, mock_ctx):
         responses_lib.add(responses_lib.POST, SUBMIT_URL, status=403)
-        result = ai_chat(prompt="Hello", poll_interval_seconds=0.01, timeout_seconds=5.0)
+        result = await ai_chat(
+            prompt="Hello", ctx=mock_ctx, poll_interval_seconds=0.01, timeout_seconds=5.0
+        )
         data = json.loads(result)
         assert "error" in data
 
     @responses_lib.activate
-    def test_poll_error_returns_error_json_with_chat_id(self, ai_chat_submit_response):
+    async def test_poll_error_returns_error_json_with_chat_id(
+        self, mock_ctx, ai_chat_submit_response
+    ):
         responses_lib.add(responses_lib.POST, SUBMIT_URL, json=ai_chat_submit_response, status=200)
         responses_lib.add(
             responses_lib.GET,
@@ -134,17 +199,52 @@ class TestAiChat:
             json={"id": "chat-abc123", "status": "failed"},
             status=200,
         )
-        result = ai_chat(prompt="Hello", poll_interval_seconds=0.01, timeout_seconds=5.0)
+        result = await ai_chat(
+            prompt="Hello", ctx=mock_ctx, poll_interval_seconds=0.01, timeout_seconds=5.0
+        )
         data = json.loads(result)
         assert "error" in data
         assert data["chat_id"] == "chat-abc123"
 
     @responses_lib.activate
-    def test_default_persona_id_from_env(
-        self, monkeypatch, ai_chat_submit_response, ai_chat_completed_response
+    async def test_progress_reported_on_each_poll(
+        self, mock_ctx, ai_chat_submit_response, ai_chat_completed_response
+    ):
+        responses_lib.add(responses_lib.POST, SUBMIT_URL, json=ai_chat_submit_response, status=200)
+        responses_lib.add(
+            responses_lib.GET, POLL_URL, json={"id": "chat-abc123", "status": "pending"}, status=200
+        )
+        responses_lib.add(responses_lib.GET, POLL_URL, json=ai_chat_completed_response, status=200)
+        await ai_chat(
+            prompt="Hello", ctx=mock_ctx, poll_interval_seconds=0.01, timeout_seconds=5.0
+        )
+        assert mock_ctx.report_progress.call_count >= 2
+        call_kwargs = mock_ctx.report_progress.call_args_list[0].kwargs
+        assert "progress" in call_kwargs
+        assert "total" in call_kwargs
+        assert "message" in call_kwargs
+
+    @responses_lib.activate
+    async def test_rate_limit_on_poll_backs_off_then_completes(
+        self, mock_ctx, ai_chat_submit_response, ai_chat_completed_response
+    ):
+        responses_lib.add(responses_lib.POST, SUBMIT_URL, json=ai_chat_submit_response, status=200)
+        responses_lib.add(responses_lib.GET, POLL_URL, status=429)
+        responses_lib.add(responses_lib.GET, POLL_URL, json=ai_chat_completed_response, status=200)
+        with patch("secoda_analysis.tools.ai_chat.asyncio.sleep") as mock_sleep:
+            mock_sleep.return_value = None
+            result = await ai_chat(
+                prompt="Hello", ctx=mock_ctx, poll_interval_seconds=0.01, timeout_seconds=5.0
+            )
+        data = json.loads(result)
+        assert data["success"] is True
+        mock_sleep.assert_any_call(60)
+
+    @responses_lib.activate
+    async def test_default_persona_id_from_env(
+        self, monkeypatch, mock_ctx, ai_chat_submit_response, ai_chat_completed_response
     ):
         monkeypatch.setenv("AI_PERSONA_ID", "env-persona-123")
-        # Reimport to pick up new env value
         import importlib
 
         import secoda_analysis.core.config as cfg
@@ -155,6 +255,8 @@ class TestAiChat:
 
         responses_lib.add(responses_lib.POST, SUBMIT_URL, json=ai_chat_submit_response, status=200)
         responses_lib.add(responses_lib.GET, POLL_URL, json=ai_chat_completed_response, status=200)
-        ai_chat_mod.ai_chat(prompt="Hello", poll_interval_seconds=0.01, timeout_seconds=5.0)
+        await ai_chat_mod.ai_chat(
+            prompt="Hello", ctx=mock_ctx, poll_interval_seconds=0.01, timeout_seconds=5.0
+        )
         body = json.loads(responses_lib.calls[0].request.body)
         assert body.get("persona_id") == "env-persona-123"

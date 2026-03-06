@@ -1,9 +1,10 @@
+import asyncio
 import json
 import time
 from typing import Annotated, Any, Optional
 
 import requests
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
@@ -146,13 +147,61 @@ def _poll_for_completion(
         time.sleep(poll_interval)
 
 
+class _RateLimited(Exception):
+    """Raised by _single_poll when the server returns HTTP 429."""
+
+
+def _single_poll(chat_id: str) -> Optional[dict[str, Any]]:
+    """Perform one GET poll of /ai/embedded_prompt/{chat_id}/.
+
+    Returns:
+        The response dict on a successful HTTP call (status may be any value).
+        None on requests.Timeout — caller should retry after a sleep.
+
+    Raises:
+        _RateLimited: On HTTP 429 — caller should back off before retrying.
+        RuntimeError: On 404, other 4xx/5xx, or unrecoverable network error.
+
+    """
+    url = f"{EAPI_BASE_URL}/ai/embedded_prompt/{chat_id}/"
+    headers = {
+        "Authorization": f"Bearer {API_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=(30, 120))
+
+        if response.status_code == 429:
+            raise _RateLimited()
+
+        if response.status_code == 404:
+            raise RuntimeError(f"Chat ID '{chat_id}' not found.")
+
+        if response.status_code >= 400:
+            try:
+                detail = response.json()
+            except Exception:
+                detail = response.text
+            raise RuntimeError(f"Polling failed with status {response.status_code}: {detail}")
+
+        return response.json()
+
+    except requests.Timeout:
+        return None
+    except (_RateLimited, RuntimeError):
+        raise
+    except requests.RequestException as exc:
+        raise RuntimeError(f"Polling request failed: {exc}") from exc
+
+
 # --------------------------------
 # Public Tool
 # --------------------------------
 
 
-def ai_chat(
+async def ai_chat(
     prompt: Annotated[str, Field(description="The message or question to send to the Secoda AI")],
+    ctx: Context,
     parent: Annotated[
         Optional[str],
         Field(
@@ -190,11 +239,14 @@ def ai_chat(
     """Start an AI chat session in Secoda and wait for the response.
 
     Submits a prompt to the Secoda embedded AI endpoint and polls until the
-    response is complete. Returns the AI's response text along with the chat ID,
-    which can be passed as `parent` in a follow-up call to continue the conversation.
+    response is complete. Sends MCP progress notifications at each poll interval
+    so clients can show elapsed time. Returns the AI's response text along with
+    the chat ID, which can be passed as `parent` in a follow-up call to continue
+    the conversation.
 
     Args:
         prompt: The message or question to send to the Secoda AI.
+        ctx: MCP context (injected by FastMCP; not part of the tool schema).
         parent: Chat ID of a previous conversation to continue (optional).
             Pass the chat_id from a previous ai_chat response to maintain context.
         persona_id: Persona ID to use for the AI chat (optional).
@@ -226,37 +278,74 @@ def ai_chat(
 
     """
     try:
-        submitted = _submit_prompt(prompt=prompt, parent=parent, persona_id=persona_id)
+        submitted = await asyncio.to_thread(_submit_prompt, prompt, parent, persona_id)
     except RuntimeError as exc:
         return json.dumps({"error": str(exc)})
 
     chat_id = submitted["id"]
+    start = time.monotonic()
 
-    try:
-        completed = _poll_for_completion(
-            chat_id=chat_id,
-            poll_interval=poll_interval_seconds,
-            timeout=timeout_seconds,
+    while True:
+        elapsed = time.monotonic() - start
+
+        if elapsed >= timeout_seconds:
+            return json.dumps(
+                {
+                    "error": (
+                        f"AI chat timed out after {timeout_seconds}s "
+                        f"waiting for completion of chat {chat_id}."
+                    ),
+                    "chat_id": chat_id,
+                }
+            )
+
+        await ctx.report_progress(
+            progress=elapsed,
+            total=timeout_seconds,
+            message=f"Waiting for Secoda AI\u2026 ({elapsed:.0f}s elapsed)",
         )
-    except RuntimeError as exc:
-        return json.dumps({"error": str(exc), "chat_id": chat_id})
 
-    response_content = None
-    resp = completed.get("response")
-    if isinstance(resp, dict):
-        response_content = resp.get("content")
-    if response_content and isinstance(response_content, str):
-        response_content = response_content.strip()
+        try:
+            data = await asyncio.to_thread(_single_poll, chat_id)
+        except _RateLimited:
+            await asyncio.sleep(60)
+            continue
+        except RuntimeError as exc:
+            return json.dumps({"error": str(exc), "chat_id": chat_id})
 
-    return json.dumps(
-        {
-            "success": True,
-            "chat_id": chat_id,
-            "status": "completed",
-            "response_content": response_content,
-        },
-        indent=2,
-    )
+        if data is None:
+            await asyncio.sleep(poll_interval_seconds)
+            continue
+
+        status = data.get("status")
+
+        if status == "completed":
+            response_content = None
+            resp = data.get("response")
+            if isinstance(resp, dict):
+                response_content = resp.get("content")
+            if response_content and isinstance(response_content, str):
+                response_content = response_content.strip()
+
+            return json.dumps(
+                {
+                    "success": True,
+                    "chat_id": chat_id,
+                    "status": "completed",
+                    "response_content": response_content,
+                },
+                indent=2,
+            )
+
+        if status == "failed":
+            return json.dumps(
+                {
+                    "error": f"AI chat task failed for chat {chat_id}.",
+                    "chat_id": chat_id,
+                }
+            )
+
+        await asyncio.sleep(poll_interval_seconds)
 
 
 # --------------------------------
