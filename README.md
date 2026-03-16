@@ -37,15 +37,21 @@ A **read-only** [Model Context Protocol (MCP)](https://modelcontextprotocol.io) 
 ## Installation
 
 ```bash
-git clone https://github.com/martinbrummerstedt/secoda-analysis-mcp-server.git
-cd secoda-analysis-mcp-server
-pip install .
+pip install secoda-analysis-mcp
 ```
 
-Or with [uv](https://docs.astral.sh/uv/) (recommended):
+Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv sync
+uvx secoda-analysis-mcp
+```
+
+From source:
+
+```bash
+git clone https://github.com/mbrummerstedt/secoda-analysis-mcp.git
+cd secoda-analysis-mcp
+pip install .
 ```
 
 ## Configuration
@@ -82,7 +88,7 @@ Add to your `.cursor/mcp.json`:
     "secoda-analysis": {
       "command": "python",
       "args": ["-m", "secoda_analysis"],
-      "cwd": "/absolute/path/to/secoda-analysis-mcp-server",
+      "cwd": "/absolute/path/to/secoda-analysis-mcp",
       "env": {
         "API_TOKEN": "your-secoda-api-token",
         "API_URL": "https://app.secoda.co/api/v1/"
@@ -102,7 +108,7 @@ Add to `claude_desktop_config.json`:
     "secoda-analysis": {
       "command": "python",
       "args": ["-m", "secoda_analysis"],
-      "cwd": "/absolute/path/to/secoda-analysis-mcp-server",
+      "cwd": "/absolute/path/to/secoda-analysis-mcp",
       "env": {
         "API_TOKEN": "your-secoda-api-token"
       }
@@ -149,8 +155,8 @@ Apache License 2.0 — see [LICENSE](LICENSE) for details.
 Clone the repo and install all dependencies (including dev tools) with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-git clone https://github.com/martinbrummerstedt/secoda-analysis-mcp-server.git
-cd secoda-analysis-mcp-server
+git clone https://github.com/mbrummerstedt/secoda-analysis-mcp.git
+cd secoda-analysis-mcp
 uv sync --extra dev
 ```
 
@@ -163,7 +169,7 @@ cp .env.example .env
 ### Project structure
 
 ```
-secoda-analysis-mcp-server/
+secoda-analysis-mcp/
 ├── src/
 │   └── secoda_analysis/        # Main package
 │       ├── __init__.py
