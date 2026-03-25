@@ -25,7 +25,7 @@
     "api_url": {
       "type": "string",
       "title": "Secoda API URL",
-      "description": "Your Secoda API base URL (e.g. https://eapi.secoda.co/api/v1/).",
+      "description": "Your Secoda API base URL (e.g. https://your-org.secoda.co/api/v1/).",
       "required": true,
       "sensitive": false
     },
@@ -41,8 +41,8 @@
     "type": "python",
     "entry_point": "server/main.py",
     "mcp_config": {
-      "command": "uvx",
-      "args": ["secoda-analysis-mcp"],
+      "command": "python",
+      "args": ["${__dirname}/server/main.py"],
       "env": {
         "API_TOKEN": "${user_config.api_token}",
         "API_URL": "${user_config.api_url}",
