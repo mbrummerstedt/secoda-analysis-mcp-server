@@ -1,5 +1,7 @@
 # Environment variables — never commit secrets
 .env
+.mcpregistry_github_token
+.mcpregistry_registry_token
 
 # Python
 __pycache__/
@@ -9,7 +11,6 @@ __pycache__/
 *.pyd
 .Python
 build/
-dist/
 *.egg-info/
 .eggs/
 *.egg

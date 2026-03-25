@@ -84,6 +84,47 @@ pip install secoda-analysis-mcp
 
 Then replace the `uvx` block above with `"command": "secoda-analysis-mcp"` and `"args": []`.
 
+### 4. Claude Desktop bundle (.mcpb) — for organisation-wide distribution
+
+A `.mcpb` (MCP Bundle) is a ZIP archive that Claude Desktop installs via drag-and-drop — no manual config editing required. The bundle auto-installs all Python dependencies on first run; the only prerequisite is Python 3.10+.
+
+Two manifests live in [`bundle/`](bundle/):
+
+| File | Purpose | Git |
+|---|---|---|
+| `manifest.template.json` | Generic — prompts the user for credentials at install time via Claude's UI | Committed |
+| `manifest.json` | Org-specific — credentials hardcoded for silent deployment | **Gitignored** — never commit |
+
+**Building an org bundle:**
+
+```bash
+# 1. Create your org manifest (one-time setup)
+cp bundle/manifest.template.json bundle/manifest.json
+```
+
+Edit `bundle/manifest.json` and set your values in `mcp_config.env`:
+
+```json
+"env": {
+  "API_TOKEN": "your-secoda-api-token",
+  "API_URL": "https://your-org.secoda.co/api/v1/",
+  "AI_PERSONA_ID": "your-persona-uuid"
+}
+```
+
+`AI_PERSONA_ID` is optional — omit it to use the workspace default persona.
+
+```bash
+# 2. Build the bundle
+chmod +x bundle/build.sh
+./bundle/build.sh
+# → dist/miinto-secoda-analyst.mcpb  (gitignored)
+```
+
+**Distributing:** Share `dist/*.mcpb` with colleagues. They drag-and-drop it onto **Claude Desktop → Settings → Developer**. Works on macOS and Windows.
+
+> **Security:** `bundle/manifest.json` and `dist/` are both gitignored. Only the credential-free template is committed. Never add credentials to any file tracked by git.
+
 ### Configuration
 
 | Variable | Description | Default |
