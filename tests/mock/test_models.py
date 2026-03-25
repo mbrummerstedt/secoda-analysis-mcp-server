@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from secoda_analysis.core.models import (
+from secoda_analysis_mcp.core.models import (
     FieldFilterOperand,
     LogicalFilterOperand,
     SortConfig,

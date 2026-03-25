@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from secoda_analysis.tools.ai_chat import ai_chat
+from secoda_analysis_mcp.tools.ai_chat import ai_chat
 
 pytestmark = pytest.mark.integration
 

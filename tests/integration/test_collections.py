@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from secoda_analysis.tools.collections import get_collection, list_collections
+from secoda_analysis_mcp.tools.collections import get_collection, list_collections
 
 pytestmark = pytest.mark.integration
 

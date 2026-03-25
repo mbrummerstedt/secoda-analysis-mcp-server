@@ -15,9 +15,7 @@ import subprocess
 import sys
 import os
 
-# The PyPI package is "secoda-analysis-mcp" but the executable inside is "secoda-analysis"
 PACKAGE = "secoda-analysis-mcp"
-EXECUTABLE = "secoda-analysis"
 
 
 def _candidates():
@@ -41,26 +39,22 @@ def _candidates():
             ("uv",  [python_dir / "uv",  bin_dir / "uv"]),
         ]
 
-    # uvx --from <package> <executable>  /  uv tool run --from <package> <executable>
-    def _args(name):
-        if name == "uvx":
-            return ["--from", PACKAGE, EXECUTABLE]
-        return ["tool", "run", "--from", PACKAGE, EXECUTABLE]
-
     seen = set()
 
     for name, _ in locations:
         found = shutil.which(name)
         if found and found not in seen:
             seen.add(found)
-            yield found, _args(name)
+            args = [PACKAGE] if name == "uvx" else ["tool", "run", PACKAGE]
+            yield found, args
 
     for name, paths in locations:
+        args = [PACKAGE] if name == "uvx" else ["tool", "run", PACKAGE]
         for p in paths:
             s = str(p)
             if p.exists() and s not in seen:
                 seen.add(s)
-                yield s, _args(name)
+                yield s, args
 
 
 def _run_with_retry():

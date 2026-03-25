@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from secoda_analysis.tools.entity import entity_lineage, glossary, retrieve_entity
+from secoda_analysis_mcp.tools.entity import entity_lineage, glossary, retrieve_entity
 
 pytestmark = pytest.mark.integration
 

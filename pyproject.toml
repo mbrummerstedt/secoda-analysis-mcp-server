@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "secoda-analysis-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Read-only MCP server for exploring and analysing a Secoda data catalog"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -44,10 +44,10 @@ dev = [
 ]
 
 [project.scripts]
-secoda-analysis = "secoda_analysis.server:main"
+secoda-analysis-mcp = "secoda_analysis_mcp.server:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/secoda_analysis"]
+packages = ["src/secoda_analysis_mcp"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

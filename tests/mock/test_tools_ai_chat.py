@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import responses as responses_lib
 
-from secoda_analysis.tools.ai_chat import (
+from secoda_analysis_mcp.tools.ai_chat import (
     _RateLimited,
     _poll_for_completion,
     _single_poll,
@@ -247,8 +247,8 @@ class TestAiChat:
         monkeypatch.setenv("AI_PERSONA_ID", "env-persona-123")
         import importlib
 
-        import secoda_analysis.core.config as cfg
-        import secoda_analysis.tools.ai_chat as ai_chat_mod
+        import secoda_analysis_mcp.core.config as cfg
+        import secoda_analysis_mcp.tools.ai_chat as ai_chat_mod
 
         importlib.reload(cfg)
         importlib.reload(ai_chat_mod)

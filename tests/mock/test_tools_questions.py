@@ -4,7 +4,7 @@ import json
 
 import responses as responses_lib
 
-from secoda_analysis.tools.questions import get_question, list_questions
+from secoda_analysis_mcp.tools.questions import get_question, list_questions
 
 LIST_URL = "https://app.secoda.co/api/v1/question/questions"
 GET_URL = "https://app.secoda.co/api/v1/question/questions/q-001"

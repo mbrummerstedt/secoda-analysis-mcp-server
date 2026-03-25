@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import responses as responses_lib
 
-from secoda_analysis.core.client import _make_resource_request, _truncate_response, call_tool
+from secoda_analysis_mcp.core.client import _make_resource_request, _truncate_response, call_tool
 
 TOOL_URL = "https://app.secoda.co/api/v1/ai/mcp/tools/call/"
 RESOURCE_URL = "https://app.secoda.co/api/v1/resource/all/res-001"

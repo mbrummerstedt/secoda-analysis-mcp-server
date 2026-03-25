@@ -1,6 +1,6 @@
 """Unit tests for the MCP system prompt."""
 
-from secoda_analysis.prompt import MCP_PROMPT
+from secoda_analysis_mcp.prompt import MCP_PROMPT
 
 
 class TestMcpPrompt:

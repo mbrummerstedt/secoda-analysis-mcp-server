@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from secoda_analysis.tools.resources import get_resource, list_resources
+from secoda_analysis_mcp.tools.resources import get_resource, list_resources
 
 pytestmark = pytest.mark.integration
 

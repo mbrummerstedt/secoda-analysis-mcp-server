@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import responses as responses_lib
 
-from secoda_analysis.tools.search import search_data_assets, search_documentation
+from secoda_analysis_mcp.tools.search import search_data_assets, search_documentation
 
 TOOL_URL = "https://app.secoda.co/api/v1/ai/mcp/tools/call/"
 

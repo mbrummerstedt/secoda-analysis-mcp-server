@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from secoda_analysis.tools.search import search_data_assets, search_documentation
+from secoda_analysis_mcp.tools.search import search_data_assets, search_documentation
 
 pytestmark = pytest.mark.integration
 

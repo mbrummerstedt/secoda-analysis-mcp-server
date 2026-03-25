@@ -4,7 +4,7 @@ import json
 
 import responses as responses_lib
 
-from secoda_analysis.tools.entity import entity_lineage, glossary, retrieve_entity
+from secoda_analysis_mcp.tools.entity import entity_lineage, glossary, retrieve_entity
 
 TOOL_URL = "https://app.secoda.co/api/v1/ai/mcp/tools/call/"
 
