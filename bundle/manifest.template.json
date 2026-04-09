@@ -1,5 +1,5 @@
 {
-  "manifest_version": "0.3",
+  "manifest_version": "0.4",
   "name": "secoda-analysis-mcp",
   "display_name": "Secoda Data Catalog Analyst",
   "version": "0.1.0",
@@ -38,11 +38,11 @@
     }
   },
   "server": {
-    "type": "python",
-    "entry_point": "server/main.py",
+    "type": "uv",
+    "entry_point": "secoda_analysis_mcp/server.py",
     "mcp_config": {
-      "command": "python",
-      "args": ["${__dirname}/server/main.py"],
+      "command": "uv",
+      "args": ["run", "--directory", "${__dirname}", "python", "-m", "secoda_analysis_mcp.server"],
       "env": {
         "API_TOKEN": "${user_config.api_token}",
         "API_URL": "${user_config.api_url}",

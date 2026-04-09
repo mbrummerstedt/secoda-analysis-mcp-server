@@ -16,6 +16,7 @@ import sys
 import os
 
 PACKAGE = "secoda-analysis-mcp"
+EXECUTABLE = "secoda-analysis"
 
 
 def _candidates():
@@ -23,6 +24,10 @@ def _candidates():
     Yield (binary, base_args) pairs in preference order.
     Checks PATH first, then paths relative to sys.executable.
     uvx and 'uv tool run' are functionally identical.
+
+    The PyPI package is 'secoda-analysis-mcp' but the entry point
+    executable is 'secoda-analysis', so uvx needs --from to
+    distinguish the package name from the executable name.
     """
     python_dir = pathlib.Path(sys.executable).parent
     is_windows = platform.system() == "Windows"
@@ -45,11 +50,17 @@ def _candidates():
         found = shutil.which(name)
         if found and found not in seen:
             seen.add(found)
-            args = [PACKAGE] if name == "uvx" else ["tool", "run", PACKAGE]
+            if name == "uvx":
+                args = ["--from", PACKAGE, EXECUTABLE]
+            else:
+                args = ["tool", "run", "--from", PACKAGE, EXECUTABLE]
             yield found, args
 
     for name, paths in locations:
-        args = [PACKAGE] if name == "uvx" else ["tool", "run", PACKAGE]
+        if name == "uvx":
+            args = ["--from", PACKAGE, EXECUTABLE]
+        else:
+            args = ["tool", "run", "--from", PACKAGE, EXECUTABLE]
         for p in paths:
             s = str(p)
             if p.exists() and s not in seen:

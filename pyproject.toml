@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "secoda-analysis-mcp"
-version = "0.1.1"
+version = "0.1.2"
 description = "Read-only MCP server for exploring and analysing a Secoda data catalog"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -45,6 +45,7 @@ dev = [
 ]
 
 [project.scripts]
+secoda-analysis = "secoda_analysis_mcp.server:main"
 secoda-analysis-mcp = "secoda_analysis_mcp.server:main"
 
 [tool.hatch.build.targets.wheel]
