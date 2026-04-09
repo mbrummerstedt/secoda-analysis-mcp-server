@@ -34,6 +34,7 @@ cp -r "$BUNDLE_DIR/server" "$STAGING/server"
 [ -f "$BUNDLE_DIR/README.md" ] && cp "$BUNDLE_DIR/README.md" "$STAGING/"
 
 cd "$STAGING"
+find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 zip -r "$OUTPUT" .
 
 rm -rf "$STAGING"
