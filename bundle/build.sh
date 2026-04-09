@@ -33,6 +33,9 @@ cp -r "$REPO_ROOT/src/secoda_analysis_mcp" "$STAGING/secoda_analysis_mcp"
 cp -r "$BUNDLE_DIR/server" "$STAGING/server"
 [ -f "$BUNDLE_DIR/README.md" ] && cp "$BUNDLE_DIR/README.md" "$STAGING/"
 
+# Strip compiled bytecode before zipping
+find "$STAGING" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+
 cd "$STAGING"
 find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 zip -r "$OUTPUT" .

@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "secoda-analysis-mcp",
   "display_name": "Secoda Data Catalog Analyst",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Explore and analyse your Secoda data catalog with Claude. Search assets, browse lineage, query documentation, and chat with AI personas — read-only access to your full data catalog.",
   "author": {
     "name": "Martin Brummerstedt",
