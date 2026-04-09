@@ -1,6 +1,6 @@
 [project]
 name = "secoda-analysis-mcp"
-version = "0.3.2"
+version = "0.3.3"
 description = "Read-only MCP server for exploring and analysing a Secoda data catalog"
 requires-python = ">=3.10"
 dependencies = [
