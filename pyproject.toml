@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "secoda-analysis-mcp"
-version = "0.1.2"
+version = "0.3.1"
 description = "Read-only MCP server for exploring and analysing a Secoda data catalog"
 readme = "README.md"
 license = { text = "Apache-2.0" }
